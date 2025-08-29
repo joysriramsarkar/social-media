@@ -8,9 +8,13 @@ generator client {
   provider = "prisma-client-js"
 }
 
+// prisma/schema.prisma
+
 datasource db {
   provider = "sqlite"
-  url      = env("DATABASE_URL")
+  // আগের লাইন: url      = env("DATABASE_URL")
+  // নতুন লাইন:
+  url      = "file:../db/custom.db" 
 }
 
 model User {

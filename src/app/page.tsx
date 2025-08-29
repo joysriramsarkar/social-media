@@ -1,134 +1,58 @@
-"use client"
+// src/app/page.tsx
+"use client"; // এই লাইনটি নিশ্চিত করে যে এটি একটি ক্লায়েন্ট কম্পোনেন্ট নয়
+// src/app/page.tsx
 
-import { useState, useEffect } from "react"
-import { MainLayout } from "@/components/layout/main-layout"
-import { Card, CardContent } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { CreatePost } from "@/components/posts/create-post"
-import { PostCard } from "@/components/posts/post-card"
+// প্রয়োজনীয় কম্পোনেন্ট এবং ডেটাবেস ক্লায়েন্ট ইম্পোর্ট করা হচ্ছে
+import { db } from "@/lib/db";
+import { MainLayout } from "@/components/layout/main-layout";
+import { CreatePost } from "@/components/posts/create-post";
+import { PostList } from "@/components/posts/post-list"; // এই নতুন ক্লায়েন্ট কম্পোনেন্টটি ডেটা দেখানোর জন্য
 
-interface Post {
-  id: string
-  content: string
-  image?: string
-  createdAt: string
-  author: {
-    id: string
-    name: string
-    username: string
-    avatar?: string
-  }
-  _count: {
-    likes: number
-    comments: number
-  }
-}
+/**
+ * Home page component.
+ * এটি একটি সার্ভার কম্পোনেন্ট যা async/await ব্যবহার করে সরাসরি ডেটাবেস থেকে ডেটা Fetch করে।
+ * এটি পেজ লোড হওয়ার সময় সার্ভারেই রান হয়।
+ */
+export default async function Home() {
+  
+  // সরাসরি সার্ভারে Prisma ব্যবহার করে পোস্টগুলো ডেটাবেস থেকে আনা হচ্ছে
+  const posts = await db.post.findMany({
+    // পোস্টগুলো নতুন থেকে পুরানো ক্রমে সাজানো হচ্ছে
+    orderBy: {
+      createdAt: "desc",
+    },
+    // পোস্টের সাথে লেখকের তথ্য এবং লাইক/কমেন্টের সংখ্যাও আনা হচ্ছে
+    include: {
+      author: {
+        select: {
+          id: true,
+          name: true,
+          username: true,
+          avatar: true, // এখানে 'image' এর পরিবর্তে 'avatar' ব্যবহার করা হয়েছে
+        },
+      },
+      _count: {
+        select: {
+          likes: true,
+          comments: true,
+        },
+      },
+    },
+  });
 
-export default function Home() {
-  const [posts, setPosts] = useState<Post[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState("")
-
-  const fetchPosts = async () => {
-    try {
-      setLoading(true)
-      const response = await fetch("/api/posts")
-      if (response.ok) {
-        const data = await response.json()
-        setPosts(data.posts)
-      } else {
-        setError("পোস্ট লোড করা যায়নি")
-      }
-    } catch (error) {
-      setError("কিছু ভুল হয়েছে")
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    fetchPosts()
-  }, [])
-
-  const handlePostCreated = () => {
-    fetchPosts()
-  }
-
-  const handlePostUpdate = () => {
-    fetchPosts()
-  }
-
-  if (loading) {
-    return (
-      <MainLayout>
-        <div className="max-w-2xl mx-auto space-y-6">
-          <CreatePost onPostCreated={handlePostCreated} />
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <Card key={i} className="bg-white dark:bg-gray-800 shadow-sm">
-                <CardContent className="p-6">
-                  <div className="space-y-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="h-10 w-10 bg-gray-300 dark:bg-gray-600 rounded-full animate-pulse"></div>
-                      <div className="space-y-2">
-                        <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-24 animate-pulse"></div>
-                        <div className="h-3 bg-gray-300 dark:bg-gray-600 rounded w-16 animate-pulse"></div>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-full animate-pulse"></div>
-                      <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-3/4 animate-pulse"></div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </MainLayout>
-    )
-  }
-
-  if (error) {
-    return (
-      <MainLayout>
-        <div className="max-w-2xl mx-auto">
-          <Card className="bg-white dark:bg-gray-800 shadow-sm">
-            <CardContent className="p-6 text-center">
-              <p className="text-red-500 mb-4">{error}</p>
-              <Button onClick={fetchPosts}>আবার চেষ্টা করুন</Button>
-            </CardContent>
-          </Card>
-        </div>
-      </MainLayout>
-    )
-  }
-
+  // সার্ভার থেকে পাওয়া ডেটা দিয়ে পেজটি রেন্ডার করা হচ্ছে
   return (
     <MainLayout>
       <div className="max-w-2xl mx-auto space-y-6">
-        <CreatePost onPostCreated={handlePostCreated} />
+        {/* CreatePost একটি ক্লায়েন্ট কম্পোনেন্ট, কারণ এখানে ইউজারের ইনপুট প্রয়োজন */}
+        <CreatePost />
         
-        <div className="space-y-4">
-          {posts.length === 0 ? (
-            <Card className="bg-white dark:bg-gray-800 shadow-sm">
-              <CardContent className="p-6 text-center">
-                <p className="text-gray-500 dark:text-gray-400">
-                  কোন পোস্ট নেই। প্রথম পোস্টটি করুন!
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            posts.map((post) => (
-              <PostCard 
-                key={post.id} 
-                post={post} 
-                onPostUpdate={handlePostUpdate}
-              />
-            ))
-          )}
-        </div>
+        {/* PostList হলো একটি ক্লায়েন্ট কম্পোনেন্ট।
+          সার্ভার থেকে পাওয়া পোস্টগুলো 'initialPosts' prop হিসেবে এখানে পাঠানো হচ্ছে।
+          এর ফলে পেজটি লোড হওয়ার সাথে সাথেই পোস্টগুলো দেখা যাবে।
+        */}
+        <PostList initialPosts={posts} />
       </div>
     </MainLayout>
-  )
+  );
 }
